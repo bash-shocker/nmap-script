@@ -37,6 +37,10 @@ fi
 
 echo "Nmap Scanning Initiated.."
 
+# Array to track scanned IP addresses
+scanned_ips=()
+
+# Read the file line by line
 while IFS= read -r line; do
   # Check if the line contains the keyword "ports"
   if echo "$line" | grep -q "portid="; then
@@ -44,12 +48,19 @@ while IFS= read -r line; do
     ip=$(echo "$line" | sed -n 's/.*addr="\([^"]*\)".*/\1/p')
     echo "IP Address value: $ip"
 
-    # Extract the ports for the IP address
-    ports=$(grep "addr=\"$ip\"" "$file" | sed -n 's/.*portid="\([^"]*\)".*/\1/p' | tr '\n' ',')
-    ports="${ports%,}"  # Remove trailing comma
+    # Check if IP address is already scanned
+    if [[ " ${scanned_ips[@]} " =~ " ${ip} " ]]; then
+      continue
+    fi
+
+    # Add IP address to scanned_ips array
+    scanned_ips+=("$ip")
+
+    # Extract all ports for the IP address
+    ports=$(grep "addr=\"$ip\"" "$file" | sed -n 's/.*portid="\([^"]*\)".*/\1/p' | tr '\n' ',' | sed 's/,$//')
     echo "Ports: $ports"
 
-    # Perform nmap scan for the IP address and ports
+    # Perform nmap scan for the IP address and all ports
     echo "Scanning $ip on ports $ports"
     nmap -A -p$ports -Pn $ip >> "nmap_output_$ip.txt"
   fi
